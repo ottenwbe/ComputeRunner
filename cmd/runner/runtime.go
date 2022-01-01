@@ -1,23 +1,28 @@
 package main
 
 import (
+	"github.com/google/uuid"
 	"github.com/robertkrimen/otto"
 	"github.com/sirupsen/logrus"
 )
 
 type Runtime struct {
 	vm   *otto.Otto
-	Name string
+	Name string    `json:"name"`
+	ID   uuid.UUID `json:"id"`
 }
 
-func newRuntime() *Runtime {
+func newRuntime(name string, extensions bool) *Runtime {
 	tmpRuntime := &Runtime{
 		vm:   otto.New(),
-		Name: "Default",
+		Name: name,
+		ID:   uuid.New(),
 	}
-	err := tmpRuntime.vm.Set("node", node(tmpRuntime))
-	if err != nil {
-		logrus.Fatalf("Node method could not be added to runtime")
+	if extensions {
+		err := tmpRuntime.vm.Set("node", node(newRuntime("Node", false)))
+		if err != nil {
+			logrus.Fatalf("Node method could not be added to runtime")
+		}
 	}
 	return tmpRuntime
 }
@@ -34,23 +39,9 @@ func (r *Runtime) Run(code string) (otto.Value, error) {
 
 func node(runtime *Runtime) func(call otto.FunctionCall) otto.Value {
 	return func(call otto.FunctionCall) otto.Value {
-		n := newNode(call)
 
-		go runNode(n, runtime)
-		untilStopped(n)
+		NewNode(call, runtime)
 
 		return otto.Value{}
 	}
-}
-
-func untilStopped(n *Node) bool {
-	return <-n.stop
-}
-
-func runNode(n *Node, r *Runtime) {
-	_, err := r.vm.Run(n.Code)
-	if err != nil {
-		logrus.Errorf("Code ran into errors while executing %v", err)
-	}
-	n.stop <- true
 }

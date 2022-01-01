@@ -20,7 +20,7 @@ var _ = Describe("Node", func() {
 		fc := otto.FunctionCall{
 			ArgumentList: []otto.Value{nameV, codeV},
 		}
-		node = newNode(fc)
+		node = NewNode(fc, CodeRuntime)
 
 		It("should have a given name from the JavaScript code", func() {
 			Expect(node.Name).To(Equal("TestName"))
@@ -32,4 +32,27 @@ var _ = Describe("Node", func() {
 			Expect(NodeRegistry).To(HaveKey(node.Name))
 		})
 	})
+
+	Context("when executed", func() {
+		var (
+			node *Node
+		)
+
+		nameV, _ := otto.ToValue("TestName")
+		codeV, _ := otto.ToValue("1 + 1")
+		fc := otto.FunctionCall{
+			ArgumentList: []otto.Value{nameV, codeV},
+		}
+		node = NewNode(fc, CodeRuntime)
+
+		It("should return a result", func() {
+			node.Run()
+			Expect(node.WaitForResult().String()).To(Equal("2"))
+		})
+		It("should stop the calculation", func() {
+			node.Run()
+			Expect(node.WaitForStopped()).To(BeTrue())
+		})
+	})
+
 })

@@ -8,7 +8,7 @@ import (
 var _ = Describe("Runtime", func() {
 	Context("when program starts", func() {
 		It("the default runtime should exist", func() {
-			Expect(DefaultRuntime).To(Not(BeNil()))
+			Expect(InfrastructureRuntime).To(Not(BeNil()))
 		})
 	})
 	Context("when running a node", func() {
@@ -18,7 +18,7 @@ var _ = Describe("Runtime", func() {
 			)
 
 			It("it should execute the node", func() {
-				err := DefaultRuntime.Run(nodeCode)
+				_, err := InfrastructureRuntime.Run(nodeCode)
 				Expect(err).To(BeNil())
 			})
 		})
@@ -29,7 +29,7 @@ var _ = Describe("Runtime", func() {
 			)
 
 			It("it should execute the node", func() {
-				err := DefaultRuntime.Run(nodeCode)
+				_, err := InfrastructureRuntime.Run(nodeCode)
 				Expect(err).ToNot(BeNil())
 			})
 		})

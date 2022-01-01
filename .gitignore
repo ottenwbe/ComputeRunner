@@ -16,3 +16,7 @@
 
 # IDE
 .idea/
+
+# App
+ComputeMiddleware*
+ComputeRunner

@@ -10,6 +10,8 @@ The purpose of this project is to provide a small testing playground to test out
 
 ```
 curl -d '{"code":"console.log(\"Hello World\");"}' -X POST localhost:8080/runtime  -H "Content-Type: application/json" -v
+
+curl -d '{"code":"node(\"A\", 50*50 "}' -X POST localhost:8080/runtime  -H "Content-Type: application/json" -v  
 ```
 
 ## Disclaimer
