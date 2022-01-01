@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/robertkrimen/otto"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -26,15 +27,27 @@ func NewResponse(accepted bool, result string, error string, runtime *Runtime) *
 func InitAPI() {
 	r := gin.Default()
 
-	r.POST("/run", postCodeToRuntime)
+	r.POST("/code/run", postCodeToRun)
 
 	r.GET("/infrastructure/nodes", getNodes)
 	r.POST("/infrastructure", postInfrastructure)
+	r.POST("/infrastructure/:node/run", postRunNode)
 
 	err := r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 	if err != nil {
 		logrus.Errorf("Router exited with Error: %v", err)
 	}
+}
+
+func postRunNode(c *gin.Context) {
+	var result otto.Value
+	nodeName := c.Param("node")
+	if node, ok := NodeRegistry[nodeName]; ok {
+		node.Run()
+		result = node.WaitForResult()
+	}
+	c.JSON(http.StatusOK,
+		NewResponse(true, result.String(), "", CodeRuntime))
 }
 
 func postInfrastructure(c *gin.Context) {
@@ -53,7 +66,7 @@ func getNodes(c *gin.Context) {
 	c.JSON(http.StatusOK, NodeRegistry)
 }
 
-func postCodeToRuntime(c *gin.Context) {
+func postCodeToRun(c *gin.Context) {
 	var code CodeRequest
 	err := c.Bind(&code)
 	if err == nil {

@@ -39,9 +39,7 @@ func (r *Runtime) Run(code string) (otto.Value, error) {
 
 func node(runtime *Runtime) func(call otto.FunctionCall) otto.Value {
 	return func(call otto.FunctionCall) otto.Value {
-
 		NewNode(call, runtime)
-
 		return otto.Value{}
 	}
 }
