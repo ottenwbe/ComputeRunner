@@ -1,6 +1,8 @@
 package main
 
 import (
+	"ComputeRunner/pkg/node"
+	"errors"
 	"github.com/robertkrimen/otto"
 	"net/http"
 
@@ -13,14 +15,14 @@ type CodeRequest struct {
 }
 
 type Response struct {
-	Accepted bool     `json:"accepted"`
-	Result   string   `json:"result"`
-	Error    string   `json:"error"`
-	Version  string   `json:"version"`
-	Runtime  *Runtime `json:"runtime"`
+	Accepted bool   `json:"accepted"`
+	Result   string `json:"result"`
+	Error    string `json:"error"`
+	Version  string `json:"version"`
+	Runtime  string `json:"application"`
 }
 
-func NewResponse(accepted bool, result string, error string, runtime *Runtime) *Response {
+func NewResponse(accepted bool, result string, error string, runtime string) *Response {
 	return &Response{Accepted: accepted, Result: result, Error: error, Runtime: runtime, Version: "1.0"}
 }
 
@@ -42,12 +44,14 @@ func InitAPI() {
 func postRunNode(c *gin.Context) {
 	var result otto.Value
 	nodeName := c.Param("node")
-	if node, ok := NodeRegistry[nodeName]; ok {
+	if node, ok := node.NodeRegistry[nodeName]; ok {
 		node.Run()
 		result = node.WaitForResult()
+		c.JSON(http.StatusOK,
+			NewResponse(true, result.String(), "", "Code"))
+	} else {
+		c.JSON(http.StatusNotFound, NewResponse(true, "", errors.New("node not found").Error(), "CodeRuntime"))
 	}
-	c.JSON(http.StatusOK,
-		NewResponse(true, result.String(), "", CodeRuntime))
 }
 
 func postInfrastructure(c *gin.Context) {
@@ -55,7 +59,7 @@ func postInfrastructure(c *gin.Context) {
 	err := c.Bind(&code)
 	if err == nil {
 		result, compErr := InfrastructureRuntime.Run(code.Code)
-		c.JSON(http.StatusOK, NewResponse(true, result.String(), stringifyError(compErr), InfrastructureRuntime))
+		c.JSON(http.StatusOK, NewResponse(true, result.String(), stringifyError(compErr), InfrastructureRuntime.Name))
 	} else {
 		logrus.Error(err)
 		c.AbortWithError(http.StatusBadRequest, err)
@@ -63,7 +67,7 @@ func postInfrastructure(c *gin.Context) {
 }
 
 func getNodes(c *gin.Context) {
-	c.JSON(http.StatusOK, NodeRegistry)
+	c.JSON(http.StatusOK, node.NodeRegistry)
 }
 
 func postCodeToRun(c *gin.Context) {
@@ -72,7 +76,7 @@ func postCodeToRun(c *gin.Context) {
 	if err == nil {
 		result, compErr := CodeRuntime.Run(code.Code)
 		c.JSON(http.StatusOK,
-			NewResponse(true, result.String(), stringifyError(compErr), CodeRuntime))
+			NewResponse(true, result.String(), stringifyError(compErr), "Code"))
 	} else {
 		logrus.Error(err)
 		c.AbortWithError(http.StatusBadRequest, err)

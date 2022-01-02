@@ -2,9 +2,9 @@
 
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/ottenwbe/computerunner/blob/main/LICENSE)
 
-This is a small, minimalistic PaaS/FaaS middleware to execute (JS) code.
+This is a small, minimalistic distributed middleware to execute code. It is inspired by my experience with FaaS, PaaS, and stream processing.
 
-The purpose of this project is to provide a small testing playground to test out things in distributed middelwares and PaaS/FaaS computing platforms.
+Note, this is a small testing playground for me to test out things in distributed middelwares and PaaS/FaaS computing platforms.
 
 ## How to run code on the platform
 

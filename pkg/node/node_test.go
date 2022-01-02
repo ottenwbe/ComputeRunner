@@ -1,15 +1,19 @@
-package main
+package node
 
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/robertkrimen/otto"
+
+	"ComputeRunner/pkg/application"
 )
+
+var appRuntime = application.NewAppRuntime("Test", application.JAVASCRIPT)
 
 var _ = Describe("Node", func() {
 
-	Context("when created", func() {
+	Context("when created w/o errors", func() {
 
 		var (
 			node *Node
@@ -20,7 +24,7 @@ var _ = Describe("Node", func() {
 		fc := otto.FunctionCall{
 			ArgumentList: []otto.Value{nameV, codeV},
 		}
-		node = NewNode(fc, CodeRuntime)
+		node, _ = NewNode(fc, appRuntime)
 
 		It("should have a given name from the JavaScript code", func() {
 			Expect(node.Name).To(Equal("TestName"))
@@ -33,17 +37,51 @@ var _ = Describe("Node", func() {
 		})
 	})
 
+	Context("when duplicate is created", func() {
+
+		nameV, _ := otto.ToValue("TestDuplicateName")
+		codeV, _ := otto.ToValue("abc = 1 + 1; console.log(abc);")
+		fc := otto.FunctionCall{
+			ArgumentList: []otto.Value{nameV, codeV},
+		}
+		_, err1 := NewNode(fc, appRuntime)
+		_, err2 := NewNode(fc, appRuntime)
+
+		It("does not fail to create the first node", func() {
+			Expect(err1).To(BeNil())
+		})
+		It("fails to create the second node", func() {
+			Expect(err2).ToNot(BeNil())
+		})
+	})
+
+	Context("when created w/o parameters", func() {
+
+		var (
+			err error
+		)
+
+		fc := otto.FunctionCall{
+			ArgumentList: []otto.Value{},
+		}
+		_, err = NewNode(fc, appRuntime)
+
+		It("fail to create the node", func() {
+			Expect(err).ToNot(BeNil())
+		})
+	})
+
 	Context("when executed", func() {
 		var (
 			node *Node
 		)
 
-		nameV, _ := otto.ToValue("TestName")
+		nameV, _ := otto.ToValue("TestExecName")
 		codeV, _ := otto.ToValue("1 + 1")
 		fc := otto.FunctionCall{
 			ArgumentList: []otto.Value{nameV, codeV},
 		}
-		node = NewNode(fc, CodeRuntime)
+		node, _ = NewNode(fc, appRuntime)
 
 		It("should return a result", func() {
 			node.Run()

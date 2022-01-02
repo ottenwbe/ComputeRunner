@@ -1,9 +1,12 @@
-package main
+package infrastructure
 
 import (
 	"github.com/google/uuid"
 	"github.com/robertkrimen/otto"
 	"github.com/sirupsen/logrus"
+
+	"ComputeRunner/pkg/application"
+	"ComputeRunner/pkg/node"
 )
 
 type Runtime struct {
@@ -12,18 +15,18 @@ type Runtime struct {
 	ID   uuid.UUID `json:"id"`
 }
 
-func newRuntime(name string, extensions bool) *Runtime {
+func NewRuntime(name string) *Runtime {
 	tmpRuntime := &Runtime{
 		vm:   otto.New(),
 		Name: name,
 		ID:   uuid.New(),
 	}
-	if extensions {
-		err := tmpRuntime.vm.Set("node", node(newRuntime("Node", false)))
-		if err != nil {
-			logrus.Fatalf("Node method could not be added to runtime")
-		}
+
+	err := tmpRuntime.vm.Set("node", newNode(application.NewAppRuntime("Node", application.JAVASCRIPT)))
+	if err != nil {
+		logrus.Fatalf("Node method could not be added to application")
 	}
+
 	return tmpRuntime
 }
 
@@ -37,9 +40,9 @@ func (r *Runtime) Run(code string) (otto.Value, error) {
 	return value, err
 }
 
-func node(runtime *Runtime) func(call otto.FunctionCall) otto.Value {
+func newNode(runtime application.AppRuntime) func(call otto.FunctionCall) otto.Value {
 	return func(call otto.FunctionCall) otto.Value {
-		NewNode(call, runtime)
+		node.NewNode(call, runtime)
 		return otto.Value{}
 	}
 }

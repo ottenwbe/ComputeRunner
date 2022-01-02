@@ -1,17 +1,18 @@
-package main
+package infrastructure
 
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"ComputeRunner/pkg/node"
 )
+
+var TestRuntime = NewRuntime("Test")
 
 var _ = Describe("Runtime", func() {
 	Context("when program starts", func() {
-		It("the default Infrastructure runtime should exist", func() {
-			Expect(InfrastructureRuntime).To(Not(BeNil()))
-		})
-		It("the default Code runtime should exist", func() {
-			Expect(CodeRuntime).To(Not(BeNil()))
+		It("the default Infrastructure application should exist", func() {
+			Expect(TestRuntime).To(Not(BeNil()))
 		})
 	})
 	Context("when adding a (infrastructure) node", func() {
@@ -21,9 +22,9 @@ var _ = Describe("Runtime", func() {
 			)
 
 			It("it should add the node", func() {
-				_, err := InfrastructureRuntime.Run(nodeCode)
+				_, err := TestRuntime.Run(nodeCode)
 				Expect(err).To(BeNil())
-				Expect(NodeRegistry).To(HaveKey("ANode"))
+				Expect(node.NodeRegistry).To(HaveKey("ANode"))
 			})
 		})
 
@@ -33,7 +34,7 @@ var _ = Describe("Runtime", func() {
 			)
 
 			It("it should execute the node", func() {
-				_, err := InfrastructureRuntime.Run(nodeCode)
+				_, err := TestRuntime.Run(nodeCode)
 				Expect(err).ToNot(BeNil())
 			})
 		})

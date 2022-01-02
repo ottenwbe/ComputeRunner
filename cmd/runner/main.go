@@ -1,13 +1,14 @@
 package main
 
 import (
+	"ComputeRunner/pkg/application"
+	"ComputeRunner/pkg/infrastructure"
 	"github.com/sirupsen/logrus"
 )
 
 var (
-	NodeRegistry          = map[string]*Node{}
-	InfrastructureRuntime = newRuntime("Infrastructure", true)
-	CodeRuntime           = newRuntime("Code", false)
+	InfrastructureRuntime = infrastructure.NewRuntime("Infrastructure")
+	CodeRuntime           = application.NewAppRuntime("Code", application.JAVASCRIPT)
 )
 
 func main() {
