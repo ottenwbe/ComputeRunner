@@ -4,7 +4,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"ComputeRunner/pkg/node"
+	"ComputeRunner/pkg/infrastructure/node"
 )
 
 var TestRuntime = NewRuntime("Test")

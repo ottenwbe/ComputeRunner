@@ -1,7 +1,7 @@
 package main
 
 import (
-	"ComputeRunner/pkg/node"
+	"ComputeRunner/pkg/infrastructure/node"
 	"errors"
 	"github.com/robertkrimen/otto"
 	"net/http"
@@ -29,7 +29,7 @@ func NewResponse(accepted bool, result string, error string, runtime string) *Re
 func InitAPI() {
 	r := gin.Default()
 
-	r.POST("/code/run", postCodeToRun)
+	r.POST("/application/run", postCodeToRun)
 
 	r.GET("/infrastructure/nodes", getNodes)
 	r.POST("/infrastructure", postInfrastructure)

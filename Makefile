@@ -41,6 +41,12 @@ fmt: ; $(info $(M) running gofmt…) @ ## Run gofmt on all source files
 		$(GOFMT) $$d/*.go  ; \
 	 done
 
+.PHONY: test
+test: ; $(info $(M) running tests…) @ ## Run tests
+	@for d in $$($(GO) list -f '{{.Dir}}' ./...); do \
+		ginkgo -cover $$d/ ; \
+	 done
+
 .PHONY: help
 help:
 	@grep -E '^[ a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'

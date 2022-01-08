@@ -6,7 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"ComputeRunner/pkg/application"
-	"ComputeRunner/pkg/node"
+	"ComputeRunner/pkg/infrastructure/node"
 )
 
 type Runtime struct {
