@@ -5,24 +5,23 @@ import (
 	"github.com/robertkrimen/otto"
 	"github.com/sirupsen/logrus"
 
-	"ComputeRunner/pkg/application"
 	"ComputeRunner/pkg/infrastructure/node"
 )
 
-type Runtime struct {
+type InfraRuntime struct {
 	vm   *otto.Otto
 	Name string    `json:"name"`
 	ID   uuid.UUID `json:"id"`
 }
 
-func NewRuntime(name string) *Runtime {
-	tmpRuntime := &Runtime{
+func NewInfraRuntime(name string) *InfraRuntime {
+	tmpRuntime := &InfraRuntime{
 		vm:   otto.New(),
 		Name: name,
 		ID:   uuid.New(),
 	}
 
-	err := tmpRuntime.vm.Set("node", newNode(application.NewAppRuntime("Node", application.JAVASCRIPT)))
+	err := tmpRuntime.vm.Set("node", newNode())
 	if err != nil {
 		logrus.Fatalf("Node method could not be added to application")
 	}
@@ -30,19 +29,22 @@ func NewRuntime(name string) *Runtime {
 	return tmpRuntime
 }
 
-func (r *Runtime) Run(code string) (otto.Value, error) {
-	logrus.Trace("Running the following code: " + code)
+func (r *InfraRuntime) Run(code string) (otto.Value, error) {
+	logrus.Trace("Running Infrastructure Code: " + code)
 	value, err := r.vm.Run(code)
-	logrus.Trace("Got result: " + value.String())
+	logrus.Trace("Got Infrastructure Code Result: " + value.String())
 	if err != nil {
-		logrus.WithField("Runtime", r.Name).Errorf("Code could not be executed by Runtime: %v", err)
+		logrus.WithField("InfraRuntime", r.Name).Errorf("Code could not be executed by InfraRuntime: %v", err)
 	}
 	return value, err
 }
 
-func newNode(runtime application.AppRuntime) func(call otto.FunctionCall) otto.Value {
+func newNode() func(call otto.FunctionCall) otto.Value {
 	return func(call otto.FunctionCall) otto.Value {
-		node.NewNode(call, runtime)
+		_, err := node.NewNodeFromCode(call)
+		if err != nil {
+			logrus.Error("Error when creating a Node: ", err)
+		}
 		return otto.Value{}
 	}
 }

@@ -1,95 +1,166 @@
 package node
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/robertkrimen/otto"
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"ComputeRunner/pkg/application"
 )
 
-type Node struct {
-	Name    string
-	Code    string
+type Type int
+
+const (
+	Asynchronous Type = iota
+	Synchronous
+)
+
+type Description struct {
+	Name       string               `json:"name"`
+	Code       string               `json:"code"`
+	EntryPoint string               `json:"entrypoint"`
+	Type       Type                 `json:"type"`
+	Runtime    application.Language `json:"runtime"`
+}
+
+type BaseNode struct {
+	Description
 	ID      uuid.UUID
 	result  chan otto.Value
 	runtime application.AppRuntime
 }
 
-func NewNode(call otto.FunctionCall, r application.AppRuntime) (*Node, error) {
+type Node interface {
+	Run(input string) (otto.Value, error)
+	Node() Description
+	WaitForStopped() bool
+	WaitForResult() otto.Value
+	GetNextResult() (otto.Value, error)
+}
+
+func NewNodeFromCode(call otto.FunctionCall) (Node, error) {
 	var (
-		nodeName, nodeCode string
-		node               *Node
-		err                error
+		description *Description
+		node        Node
+		err         error
 	)
 
-	nodeName, nodeCode, err = extractNodeStrings(call)
+	description, err = ExtractNodeStrings(call)
+	if err != nil {
+		log.Info("node extract error")
+		return nil, err
+	}
+
+	node, err = NewNode(description)
+	if err != nil {
+		log.Info("new node error")
+		return nil, err
+	}
+
+	return node, nil
+}
+
+func NewNode(description *Description) (Node, error) {
+	var (
+		node Node
+		err  error
+	)
+
+	err = Registry.DoesNodeAlreadyExist(description.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	err = doesNodeAlreadyExist(nodeName)
-	if err != nil {
-		return nil, err
-	}
-
-	node = newNode(node, nodeName, nodeCode, r)
+	node = newNode(description)
 	addNodeToRegistry(node)
 
 	return node, err
 }
 
-func addNodeToRegistry(node *Node) {
-	NodeRegistry[node.Name] = node
-}
-
-func newNode(node *Node, nodeName string, nodeCode string, r application.AppRuntime) *Node {
-	node = &Node{
-		Name:    nodeName,
-		Code:    nodeCode,
-		ID:      uuid.New(),
-		result:  make(chan otto.Value),
-		runtime: r,
+func newNode(description *Description) Node {
+	return &BaseNode{
+		Description: *description,
+		ID:          uuid.New(),
+		result:      make(chan otto.Value),
+		runtime:     runtimeByID(description.Name, description.Runtime),
 	}
-	return node
 }
 
-func extractNodeStrings(call otto.FunctionCall) (nodeName string, nodeCode string, err error) {
-	if len(call.ArgumentList) < 2 {
-		err = errors.New("not enough arguments in node")
-	} else {
-		nodeName = call.Argument(0).String()
-		nodeCode = call.Argument(1).String()
-	}
-	return nodeName, nodeCode, err
+func addNodeToRegistry(node Node) {
+	Registry[node.Node().Name] = node
 }
 
-func doesNodeAlreadyExist(name string) error {
-	var err error
-	if _, ok := NodeRegistry[name]; ok {
-		err = errors.New("node already exists")
-	}
-	return err
+func runtimeByID(name string, runtime application.Language) application.AppRuntime {
+	return application.NewAppRuntime(fmt.Sprintf("%v_rt", name), runtime)
 }
 
-func (n *Node) WaitForStopped() bool {
+func (n *BaseNode) WaitForStopped() bool {
 	<-n.result
 	return true
 }
 
-func (n *Node) WaitForResult() otto.Value {
+func (n *BaseNode) WaitForResult() otto.Value {
 	return <-n.result
 }
 
-func (n *Node) Run() {
+func (n *BaseNode) Node() Description {
+	return n.Description
+}
+
+func (n *BaseNode) Run(input string) (otto.Value, error) {
+	switch n.Type {
+	case Asynchronous:
+		log.Info("Run Async")
+		return n.asyncNodeRun()
+	case Synchronous:
+		log.Info("Run Sync")
+		return n.doRun(input)
+	default:
+		return n.asyncNodeRun()
+	}
+}
+
+func (n *BaseNode) asyncNodeRun() (otto.Value, error) {
 	go func() {
-		value, err := n.runtime.Run(n.Code)
-		if err != nil {
-			logrus.Errorf("Code ran into errors while executing %v", err)
-		}
+		_ = n.runtime.BeforeStart(n.EntryPoint)
+		value, _ := n.doRun("")
 
 		n.result <- value
 	}()
+
+	return otto.UndefinedValue(), nil
+}
+
+func (n *BaseNode) GetNextResult() (otto.Value, error) {
+	select {
+	case x, ok := <-n.result:
+		if ok {
+			logNode(n).Infof("Value %d was read.\n", x)
+		} else {
+			logNode(n).Info("Channel closed!")
+		}
+		return x, nil
+	default:
+		logNode(n).Info("No value ready, moving on.")
+	}
+	return otto.UndefinedValue(), nil
+}
+
+func (n *BaseNode) doRun(input string) (otto.Value, error) {
+	err := n.runtime.BeforeStart(n.EntryPoint)
+	if err != nil {
+		logNode(n).Errorf("Before Start Scripts ran into errors: %v", err)
+	}
+	value, err := n.runtime.Run(n.Code)
+	if err != nil {
+		logNode(n).Errorf("Code ran into errors: %v", err)
+	}
+
+	return value, err
+}
+
+func logNode(n *BaseNode) *log.Entry {
+	return log.WithField("node", n.Name).WithField("node-id", n.ID.String())
 }

@@ -3,6 +3,7 @@ package application
 import (
 	"github.com/google/uuid"
 	"github.com/robertkrimen/otto"
+	"github.com/sirupsen/logrus"
 )
 
 type Language int
@@ -13,6 +14,7 @@ const (
 
 type AppRuntime interface {
 	Run(code string) (otto.Value, error)
+	BeforeStart(point string) error
 }
 
 func NewAppRuntime(name string, language Language) AppRuntime {
@@ -34,7 +36,17 @@ type JSRuntime struct {
 	ID   uuid.UUID `json:"id"`
 }
 
+func (j *JSRuntime) BeforeStart(entryPoint string) error {
+	if entryPoint != "" {
+		_, err := j.vm.Run(entryPoint)
+		return err
+	}
+	return nil
+}
+
 func (j *JSRuntime) Run(code string) (result otto.Value, err error) {
+	logrus.Info("Executing: " + code)
 	result, err = j.vm.Run(code)
+	logrus.Info("res:" + result.String())
 	return
 }

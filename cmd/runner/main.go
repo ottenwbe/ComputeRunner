@@ -7,12 +7,12 @@ import (
 )
 
 var (
-	InfrastructureRuntime = infrastructure.NewRuntime("Infrastructure")
+	InfrastructureRuntime = infrastructure.NewInfraRuntime("Infrastructure")
 	CodeRuntime           = application.NewAppRuntime("Code", application.JAVASCRIPT)
 )
 
 func main() {
-	logrus.Info("Welcome to the Computable PaaS Runtime")
+	logrus.Info("Welcome to the Computable PaaS InfraRuntime")
 
 	InitAPI()
 }

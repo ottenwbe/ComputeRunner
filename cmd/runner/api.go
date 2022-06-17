@@ -1,13 +1,15 @@
 package main
 
 import (
+	"ComputeRunner/pkg/account"
 	"ComputeRunner/pkg/infrastructure/node"
+
 	"errors"
-	"github.com/robertkrimen/otto"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
+	"github.com/robertkrimen/otto"
+	log "github.com/sirupsen/logrus"
 )
 
 type CodeRequest struct {
@@ -27,28 +29,53 @@ func NewResponse(accepted bool, result string, error string, runtime string) *Re
 }
 
 func InitAPI() {
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Logger(), gin.Recovery())
+
+	accPath := r.Group("/accounts")
+	accPath.GET("/names/:account", getAccountByName)
+	accPath.GET("/:id", getAccountByID)
+	accPath.POST("/:account", postAccount)
 
 	r.POST("/application/run", postCodeToRun)
 
 	r.GET("/infrastructure/nodes", getNodes)
 	r.POST("/infrastructure", postInfrastructure)
 	r.POST("/infrastructure/:node/run", postRunNode)
+	r.GET("/infrastructure/:node/result", getNodeExecResult)
 
 	err := r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 	if err != nil {
-		logrus.Errorf("Router exited with Error: %v", err)
+		log.Errorf("Router exited with Error: %v", err)
+	}
+}
+
+func getNodeExecResult(c *gin.Context) {
+	nodeName := c.Param("node")
+	if node, ok := node.Registry[nodeName]; ok {
+		result, err := node.GetNextResult()
+		if result.IsUndefined() {
+			c.JSON(http.StatusNoContent,
+				NewResponse(true, "", stringifyError(err), "Code"))
+		} else {
+			c.JSON(http.StatusOK,
+				NewResponse(true, result.String(), stringifyError(err), "Code"))
+		}
+	} else {
+		c.JSON(http.StatusNotFound, NewResponse(true, "", errors.New("node not found").Error(), "CodeRuntime"))
 	}
 }
 
 func postRunNode(c *gin.Context) {
-	var result otto.Value
+	var (
+		result otto.Value
+		err    error
+	)
 	nodeName := c.Param("node")
-	if node, ok := node.NodeRegistry[nodeName]; ok {
-		node.Run()
-		result = node.WaitForResult()
+	if node, ok := node.Registry[nodeName]; ok {
+		result, err = node.Run("")
 		c.JSON(http.StatusOK,
-			NewResponse(true, result.String(), "", "Code"))
+			NewResponse(true, result.String(), stringifyError(err), "Code"))
 	} else {
 		c.JSON(http.StatusNotFound, NewResponse(true, "", errors.New("node not found").Error(), "CodeRuntime"))
 	}
@@ -61,13 +88,13 @@ func postInfrastructure(c *gin.Context) {
 		result, compErr := InfrastructureRuntime.Run(code.Code)
 		c.JSON(http.StatusOK, NewResponse(true, result.String(), stringifyError(compErr), InfrastructureRuntime.Name))
 	} else {
-		logrus.Error(err)
+		log.Error(err)
 		c.AbortWithError(http.StatusBadRequest, err)
 	}
 }
 
 func getNodes(c *gin.Context) {
-	c.JSON(http.StatusOK, node.NodeRegistry)
+	c.JSON(http.StatusOK, node.Registry)
 }
 
 func postCodeToRun(c *gin.Context) {
@@ -78,9 +105,55 @@ func postCodeToRun(c *gin.Context) {
 		c.JSON(http.StatusOK,
 			NewResponse(true, result.String(), stringifyError(compErr), "Code"))
 	} else {
-		logrus.Error(err)
+		log.Error(err)
 		c.AbortWithError(http.StatusBadRequest, err)
 	}
+}
+
+func postAccount(c *gin.Context) {
+	name := c.Param("account")
+
+	acc := account.NewAccount(name)
+	err := account.Accounts.Add(acc)
+
+	log.Infof("Account creation for %v", name)
+
+	if err == nil {
+		c.JSON(http.StatusCreated, acc)
+	} else if err == account.ALREADYEXISTSERROR {
+		c.AbortWithError(http.StatusConflict, err)
+	} else if err == account.NILERROR {
+		c.AbortWithError(http.StatusNotFound, err)
+	} else {
+		log.Error(err)
+		c.AbortWithError(http.StatusBadRequest, err)
+	}
+}
+
+func getAccountByName(c *gin.Context) {
+	name := c.Param("account")
+
+	acc := account.Accounts.RetrieveByName(name)
+
+	if acc != nil {
+		c.JSON(http.StatusOK, acc)
+	} else {
+		c.AbortWithStatus(http.StatusNotFound)
+	}
+
+}
+
+func getAccountByID(c *gin.Context) {
+	id := c.Param("id")
+
+	acc := account.Accounts.RetrieveByID(id)
+
+	if acc != nil {
+		c.JSON(http.StatusOK, acc)
+	} else {
+		c.AbortWithStatus(http.StatusNotFound)
+	}
+
 }
 
 func stringifyError(err error) string {

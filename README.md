@@ -9,10 +9,13 @@ Note, this is a small testing playground for me to test out things in distribute
 ## How to run code on the platform
 
 ```
-curl -d '{"code":"console.log(\"Hello World\");"}' -X POST localhost:8080/runtime  -H "Content-Type: application/json" -v
+curl -d '{"code":"console.log(\"Hello World\");"}' -X POST localhost:8080/application/run  -H "Content-Type: application/json" -v
+curl -d '{"code":"2*5+10"}' -X POST localhost:8080/application/run  -H "Content-Type: application/json" -v
 
-curl -d '{"code":"node(\"A\", 50*50 "}' -X POST localhost:8080/runtime  -H "Content-Type: application/json" -v  
+curl -d '{"code":"node(\"A\", 50*50 )"}' -X POST localhost:8080/infrastructure  -H "Content-Type: application/json" -v  
 ```
+
+
 
 ## Disclaimer
 

@@ -7,9 +7,9 @@ import (
 	"ComputeRunner/pkg/infrastructure/node"
 )
 
-var TestRuntime = NewRuntime("Test")
+var TestRuntime = NewInfraRuntime("Test")
 
-var _ = Describe("Runtime", func() {
+var _ = Describe("InfraRuntime", func() {
 	Context("when program starts", func() {
 		It("the default Infrastructure application should exist", func() {
 			Expect(TestRuntime).To(Not(BeNil()))
@@ -24,7 +24,7 @@ var _ = Describe("Runtime", func() {
 			It("it should add the node", func() {
 				_, err := TestRuntime.Run(nodeCode)
 				Expect(err).To(BeNil())
-				Expect(node.NodeRegistry).To(HaveKey("ANode"))
+				Expect(node.Registry).To(HaveKey("ANode"))
 			})
 		})
 
